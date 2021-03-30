@@ -1,7 +1,9 @@
 const express = require("express");
-
+const mongoose = require("mongoose");
 const feedRoutes = require("./routes/feed");
 const app = express();
+
+const MONGODB_URI = `mongodb+srv://${process.env.MONGODB_USERNAME}:${process.env.MONGODB_PASSWORD}@cluster0.edrzp.mongodb.net/messages?retryWrites=true&w=majority`;
 
 // app.use(express.urlencoded({ extended: true })); //x-www-form-urlencoded data handling done using this
 
@@ -24,5 +26,12 @@ app.use((req, res, next) => {
 // ROUTES
 app.use("/feed", feedRoutes);
 
-// START SERVER
-app.listen(8080);
+// CONNECT TO DB
+mongoose
+  .connect(MONGODB_URI)
+  .then((result) => {
+    console.log("DB CONNECTED");
+    // START SERVER
+    app.listen(8080);
+  })
+  .catch((err) => console.error(err));
