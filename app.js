@@ -4,6 +4,7 @@ const multer = require("multer");
 const hash = require("random-hash");
 const mongoose = require("mongoose");
 const feedRoutes = require("./routes/feed");
+const authRoutes = require("./routes/auth");
 
 const app = express();
 const fileStorage = multer.diskStorage({
@@ -52,13 +53,15 @@ app.use((req, res, next) => {
 
 // ROUTES
 app.use("/feed", feedRoutes);
+app.use("/auth", authRoutes);
 
 // ERROR HANDLING MIDDLEWARE
 app.use((error, req, res, next) => {
   console.log(error);
   const statusCode = error.statusCode || 500;
   const message = error.message;
-  res.status(statusCode).json({ message: message });
+  const data = error.data || [];
+  res.status(statusCode).json({ message: message, data: data });
 });
 
 // CONNECT TO DB
