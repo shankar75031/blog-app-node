@@ -1,15 +1,40 @@
 const path = require("path");
 const express = require("express");
+const multer = require("multer");
+const hash = require("random-hash");
 const mongoose = require("mongoose");
 const feedRoutes = require("./routes/feed");
-const app = express();
 
+const app = express();
+const fileStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, "images");
+  },
+  filename: (req, file, cb) => {
+    cb(null, hash.generateHash({ length: 5 }) + "-" + file.originalname);
+  },
+});
+const fileFilter = (req, file, cb) => {
+  if (
+    file.mimetype === "image/png" ||
+    file.mimetype === "image/jpg" ||
+    file.mimetype === "image/jpeg"
+  ) {
+    cb(null, true);
+  } else {
+    cb(null, false);
+  }
+};
 const MONGODB_URI = `mongodb+srv://${process.env.MONGODB_USERNAME}:${process.env.MONGODB_PASSWORD}@cluster0.edrzp.mongodb.net/messages?retryWrites=true&w=majority`;
 
-// app.use(express.urlencoded({ extended: true })); //x-www-form-urlencoded data handling done using this
-
 // MIDDLEWARES
+// app.use(express.urlencoded({ extended: true })); //x-www-form-urlencoded data handling done using this
 app.use(express.json());
+app.use(express.urlencoded({ extended: false }));
+
+app.use(
+  multer({ storage: fileStorage, fileFilter: fileFilter }).single("image")
+);
 app.use("/images", express.static(path.join(__dirname, "images")));
 
 app.use((req, res, next) => {
