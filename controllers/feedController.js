@@ -1,21 +1,18 @@
 const { validationResult } = require("express-validator");
 const Post = require("../models/post");
+const { handleError } = require("../utils/errorUtils");
 
 exports.getPosts = (req, res, next) => {
-  res.status(200).json({
-    posts: [
-      {
-        _id: "1",
-        title: "First post",
-        content: "THis is a sample content of first post",
-        imageUrl: "images/duck.jpg",
-        creator: {
-          name: "Kunj",
-        },
-        createdAt: new Date(),
-      },
-    ],
-  });
+  Post.find()
+    .then((posts) => {
+      res.status(200).json({
+        message: "Fetched posts successfully",
+        posts: posts,
+      });
+    })
+    .catch((err) => {
+      handleError(err, next);
+    });
 };
 
 exports.createPost = (req, res, next) => {
@@ -23,7 +20,6 @@ exports.createPost = (req, res, next) => {
   if (!errors.isEmpty()) {
     const error = new Error("Validation failed, entered data is incorrect");
     error.statusCode = 422;
-
     throw error;
   }
   const title = req.body.title;
@@ -31,7 +27,7 @@ exports.createPost = (req, res, next) => {
   const post = new Post({
     title: title,
     content: content,
-    imageUrl: "images/duck.jpg",
+    imageUrl: "images/sample.jpg",
     creator: {
       name: "Kunj",
     },
@@ -46,10 +42,22 @@ exports.createPost = (req, res, next) => {
       });
     })
     .catch((err) => {
-      console.log(err);
-      if (!err.statusCode) {
-        err.statusCode = 500;
+      handleError(err, next);
+    });
+};
+
+exports.getPost = (req, res, next) => {
+  const postId = req.params.postId;
+  Post.findById(postId)
+    .then((post) => {
+      if (!post) {
+        const error = new Error("Could not find post.");
+        error.statusCode = 404;
+        throw error;
       }
-      next(err);
+      res.status(200).json({ message: "Post fetched", post: post });
+    })
+    .catch((err) => {
+      handleError(err, next);
     });
 };
