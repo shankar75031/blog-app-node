@@ -1,3 +1,4 @@
+const path = require("path");
 const express = require("express");
 const mongoose = require("mongoose");
 const feedRoutes = require("./routes/feed");
@@ -9,6 +10,7 @@ const MONGODB_URI = `mongodb+srv://${process.env.MONGODB_USERNAME}:${process.env
 
 // MIDDLEWARES
 app.use(express.json());
+app.use("/images", express.static(path.join(__dirname, "images")));
 
 app.use((req, res, next) => {
   // Set which domains can send requests
@@ -25,6 +27,14 @@ app.use((req, res, next) => {
 
 // ROUTES
 app.use("/feed", feedRoutes);
+
+// ERROR HANDLING MIDDLEWARE
+app.use((error, req, res, next) => {
+  console.log(error);
+  const statusCode = error.statusCode || 500;
+  const message = error.message;
+  res.status(statusCode).json({ message: message });
+});
 
 // CONNECT TO DB
 mongoose
