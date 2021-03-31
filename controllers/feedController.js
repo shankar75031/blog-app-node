@@ -107,13 +107,14 @@ exports.updatePost = (req, res, next) => {
   }
 
   Post.findById(postId)
+    .populate("creator")
     .then((post) => {
       if (!post) {
         const error = new Error("Could not find post.");
         error.statusCode = 404;
         throw error;
       }
-      if (post.creator.toString() !== req.userId) {
+      if (post.creator._id.toString() !== req.userId) {
         const error = new Error("Unauthorized");
         error.statusCode = 403;
         throw error;
@@ -127,6 +128,10 @@ exports.updatePost = (req, res, next) => {
       return post.save();
     })
     .then((result) => {
+      io.getIO().emit("posts", {
+        action: "update",
+        post: result,
+      });
       res.status(200).json({ message: "Post updated", post: result });
     })
     .catch((err) => {
