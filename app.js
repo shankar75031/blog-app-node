@@ -48,6 +48,9 @@ app.use((req, res, next) => {
   );
   // Set the types of headers that the client can set on their requests
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(200);
+  }
   next();
 });
 
