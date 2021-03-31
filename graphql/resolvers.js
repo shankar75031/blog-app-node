@@ -17,11 +17,15 @@ module.exports = {
     }
     if (errors.length > 0) {
       const error = new Error("invalid input");
+      error.data = errors;
+      error.statusCode = 422;
       throw error;
     }
     const existingUser = await User.findOne({ email: userInput.email });
     if (existingUser) {
       const error = new Error("User exists already");
+      error.data = errors;
+      error.statusCode = 422;
       throw error;
     }
     const hashedPassword = await bcrypt.hash(userInput.password, 12);
