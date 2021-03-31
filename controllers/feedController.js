@@ -1,6 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 const { validationResult } = require("express-validator");
+const io = require("../socket");
 const Post = require("../models/post");
 const User = require("../models/user");
 const { handleError } = require("../utils/errorUtils");
@@ -23,7 +24,7 @@ exports.getPosts = async (req, res, next) => {
   }
 };
 
-exports.createPost = (req, res, next) => {
+exports.createPost = async (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     const error = new Error("Validation failed, entered data is incorrect");
@@ -46,27 +47,24 @@ exports.createPost = (req, res, next) => {
     imageUrl: imageUrl,
     creator: req.userId,
   });
-  post
-    .save()
-    .then((result) => {
-      return User.findById(req.userId);
-    })
-    .then((user) => {
-      creator = user;
-      user.posts.push(post);
-      return user.save();
-    })
-    .then((result) => {
-      console.log(result);
-      res.status(201).json({
-        message: "Post created successfully",
-        post: post,
-        creator: { _id: creator._id, name: creator.name },
-      });
-    })
-    .catch((err) => {
-      handleError(err, next);
+  try {
+    await post.save();
+    const user = await User.findById(req.userId);
+    creator = user;
+    user.posts.push(post);
+    await user.save();
+    io.getIO().emit("posts", {
+      action: "create",
+      post: post,
     });
+    res.status(201).json({
+      message: "Post created successfully",
+      post: post,
+      creator: { _id: creator._id, name: creator.name },
+    });
+  } catch (err) {
+    handleError(err, next);
+  }
 };
 
 exports.getPost = (req, res, next) => {
