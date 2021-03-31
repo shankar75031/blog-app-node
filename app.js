@@ -3,9 +3,9 @@ const express = require("express");
 const multer = require("multer");
 const hash = require("random-hash");
 const mongoose = require("mongoose");
-const feedRoutes = require("./routes/feed");
-const authRoutes = require("./routes/auth");
-
+const { graphqlHTTP } = require("express-graphql");
+const graphQlSchema = require("./graphql/schema");
+const graphQlResolvers = require("./graphql/resolvers");
 const app = express();
 const fileStorage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -51,9 +51,14 @@ app.use((req, res, next) => {
   next();
 });
 
-// ROUTES
-app.use("/feed", feedRoutes);
-app.use("/auth", authRoutes);
+app.use(
+  "/graphql",
+  graphqlHTTP({
+    schema: graphQlSchema,
+    rootValue: graphQlResolvers,
+    graphiql: true,
+  })
+);
 
 // ERROR HANDLING MIDDLEWARE
 app.use((error, req, res, next) => {
@@ -69,11 +74,6 @@ mongoose
   .connect(MONGODB_URI)
   .then((result) => {
     console.log("DB CONNECTED");
-    const server = app.listen(8080);
-    const io = require("./socket").init(server);
-
-    io.on("connection", (socket) => {
-      console.log("Client connected");
-    });
+    app.listen(8080);
   })
   .catch((err) => console.error(err));
