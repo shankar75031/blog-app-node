@@ -69,7 +69,13 @@ mongoose
   .connect(MONGODB_URI)
   .then((result) => {
     console.log("DB CONNECTED");
-    // START SERVER
-    app.listen(8080);
+    const httpServer = require("http").createServer(app);
+    const io = require("socket.io")(httpServer);
+
+    io.on("connection", (socket) => {
+      console.log("Client connected");
+    });
+
+    httpServer.listen(8080);
   })
   .catch((err) => console.error(err));
