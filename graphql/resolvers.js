@@ -129,4 +129,30 @@ module.exports = {
       throw error;
     }
   },
+  posts: async (args, req) => {
+    try {
+      if (!req.isAuth) {
+        const error = new Error("Not authenticated");
+        error.statusCode = 401;
+        throw error;
+      }
+    } catch (error) {
+      error.data = [];
+      error.statusCode = 500;
+      throw error;
+    }
+    const totalPosts = await Post.find().countDocuments();
+    const posts = await Post.find().sort({ createdAt: -1 }).populate("creator");
+    return {
+      posts: posts.map((post) => {
+        return {
+          ...post._doc,
+          _id: post._id.toString(),
+          createdAt: post.createdAt.toISOString(),
+          updatedAt: post.updatedAt.toISOString(),
+        };
+      }),
+      totalPosts: totalPosts,
+    };
+  },
 };
