@@ -3,10 +3,13 @@ const express = require("express");
 const multer = require("multer");
 const hash = require("random-hash");
 const mongoose = require("mongoose");
-const feedRoutes = require("./routes/feed");
-const authRoutes = require("./routes/auth");
-
+const { graphqlHTTP } = require("express-graphql");
+const graphQlSchema = require("./graphql/schema");
+const graphQlResolvers = require("./graphql/resolvers");
 const app = express();
+const auth = require("./middleware/auth");
+const { clearImage } = require("./utils/file");
+
 const fileStorage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, "images");
@@ -48,12 +51,49 @@ app.use((req, res, next) => {
   );
   // Set the types of headers that the client can set on their requests
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(200);
+  }
   next();
 });
+app.use(auth);
 
-// ROUTES
-app.use("/feed", feedRoutes);
-app.use("/auth", authRoutes);
+app.put("/post-image", (req, res, next) => {
+  if (!req.isAuth) {
+    throw new Error("Not authenticated");
+  }
+  if (!req.file) {
+    return res.status(200).json({ message: "No file provided!" });
+  }
+  if (req.body.oldPath) {
+    clearImage(req.body.oldPath);
+  }
+  return res
+    .status(201)
+    .json({ message: "File stored", filePath: req.file.path });
+});
+
+app.use(
+  "/graphql",
+  graphqlHTTP({
+    schema: graphQlSchema,
+    rootValue: graphQlResolvers,
+    graphiql: true,
+    customFormatErrorFn(err) {
+      if (!err.originalError) {
+        return err;
+      }
+      const data = err.originalError.data;
+      const message = err.message || "An error occured";
+      const code = err.originalError.statusCode || 500;
+      return {
+        message: message,
+        status: code,
+        data: data,
+      };
+    },
+  })
+);
 
 // ERROR HANDLING MIDDLEWARE
 app.use((error, req, res, next) => {
@@ -69,11 +109,6 @@ mongoose
   .connect(MONGODB_URI)
   .then((result) => {
     console.log("DB CONNECTED");
-    const server = app.listen(8080);
-    const io = require("./socket").init(server);
-
-    io.on("connection", (socket) => {
-      console.log("Client connected");
-    });
+    app.listen(8080);
   })
   .catch((err) => console.error(err));
